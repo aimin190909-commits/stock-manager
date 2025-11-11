@@ -248,3 +248,31 @@ def api_delete():
 
 if __name__ == "__main__":
     app.run(debug=True)
+
+@app.route("/api/update")
+def api_update():
+    name = request.args.get("name")
+    action = request.args.get("action")
+
+    if name not in inventory:
+        return redirect(url_for("index"))
+
+    prev = inventory[name]["quantity"]
+
+    if action == "plus":
+        inventory[name]["quantity"] += 1
+    elif action == "minus" and inventory[name]["quantity"] > 0:
+        inventory[name]["quantity"] -= 1
+
+    save_inventory()
+    return redirect(url_for("index"))
+
+
+@app.route("/api/delete")
+def api_delete():
+    name = request.args.get("name")
+    if name in inventory:
+        del inventory[name]
+        save_inventory()
+    return redirect(url_for("index"))
+

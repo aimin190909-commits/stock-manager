@@ -180,3 +180,22 @@ def logout():
     return redirect(url_for("index"))
 
 @app.route("/change", methods=["POST"])
+@login_required
+def change():
+    name = request.form.get("name", "").strip()
+    action = request.form.get("action", "")
+
+    if name not in inventory:
+        return redirect(url_for("index"))
+
+    if action == "plus":
+        inventory[name]["quantity"] += 1
+        save_log("수량 증가", name, "+1")
+    elif action == "minus":
+        if inventory[name]["quantity"] > 0:
+            inventory[name]["quantity"] -= 1
+            save_log("수량 감소", name, "-1")
+    save_inventory()
+
+    return redirect(url_for("index"))
+

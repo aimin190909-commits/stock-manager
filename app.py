@@ -1,6 +1,21 @@
-from flask import Flask
-app = Flask(__name__)
+from flask import Flask, request, redirect, url_for, session, render_template_string
 
+app = Flask(__name__)
+app.secret_key = "secure-key"  # 아무 문자열 가능
+
+
+# ====== 재고 관리 클래스 ======
+class Item:
+    def __init__(self, quantity, date):
+        self.quantity = quantity
+        self.date = date
+
+
+# ====== 재고 저장소 ======
+inventory = {}
+
+
+# ====== HTML 템플릿 ======
 BASE_TEMPLATE = """
 <!doctype html>
 <html lang="ko">
@@ -80,11 +95,6 @@ BASE_TEMPLATE = """
 
   <div class="d-flex justify-content-between mb-4">
     <div class="brand">📦 재고 관리</div>
-    {% if session.admin %}
-      <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('logout') }}">로그아웃</a>
-    {% else %}
-      <a class="btn btn-primary btn-sm" href="{{ url_for('login') }}">관리자 로그인</a>
-    {% endif %}
   </div>
 
   <div class="card mb-4">
@@ -128,3 +138,55 @@ BASE_TEMPLATE = """
 </body>
 </html>
 """
+
+
+# ====== 라우트 ======
+
+@app.route("/")
+def home():
+    return render_template_string(BASE_TEMPLATE, inventory=inventory)
+
+
+@app.route("/change", methods=["POST"])
+def change():
+    name = request.form["name"]
+    qty = int(request.form["quantity"])
+    date = request.form["date"]
+    action = request.form["action"]
+
+    if name not in inventory:
+        inventory[name] = Item(0, date)
+
+    if action == "in":  # 입고
+        inventory[name].quantity += qty
+        inventory[name].date = date
+    elif action == "out":  # 출고
+        inventory[name].quantity = max(0, inventory[name].quantity - qty)
+
+    return redirect(url_for("home"))
+
+
+@app.route("/update")
+def api_update():
+    name = request.args.get("name")
+    action = request.args.get("action")
+
+    if name in inventory:
+        if action == "plus":
+            inventory[name].quantity += 1
+        elif action == "minus":
+            inventory[name].quantity = max(0, inventory[name].quantity - 1)
+
+    return redirect(url_for("home"))
+
+
+@app.route("/delete")
+def api_delete():
+    name = request.args.get("name")
+    if name in inventory:
+        del inventory[name]
+    return redirect(url_for("home"))
+
+
+if __name__ == "__main__":
+    app.run(debug=True)
